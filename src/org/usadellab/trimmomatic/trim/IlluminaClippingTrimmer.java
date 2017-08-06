@@ -50,7 +50,17 @@ public class IlluminaClippingTrimmer implements Trimmer
 		String arg[] = args.split(":");
 		
 		File seqs=new File(arg[0]);
-
+		
+		if(!seqs.exists() && arg[0].lastIndexOf(File.separator)==-1){
+			String path = Trimmer.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+			path = java.net.URLDecoder.decode(path, "UTF-8");
+			//System.out.println(path);
+			int firstIndex = path.lastIndexOf(System.getProperty("path.separator")) + 1;
+			int lastIndex = path.lastIndexOf(File.separator) + 1;
+			path = path.substring(firstIndex, lastIndex);
+			seqs=new File(path.concat("adapters/").concat(arg[0]));
+		}
+		
 		int seedMaxMiss = Integer.parseInt(arg[1]);
 		int minPalindromeLikelihood = Integer.parseInt(arg[2]);
 		int minSequenceLikelihood = Integer.parseInt(arg[3]);
