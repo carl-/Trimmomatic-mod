@@ -185,7 +185,8 @@ public class TrimmomaticSE extends Trimmomatic
 			}
 		catch (InterruptedException e)
 			{
-			throw new RuntimeException(e);
+			//throw new RuntimeException(e);
+			System.exit(0);
 			}
 
 	}
