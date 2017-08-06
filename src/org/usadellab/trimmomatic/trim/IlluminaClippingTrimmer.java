@@ -54,10 +54,10 @@ public class IlluminaClippingTrimmer implements Trimmer
 		if(!seqs.exists() && arg[0].lastIndexOf(File.separator)==-1){
 			String path = Trimmer.class.getProtectionDomain().getCodeSource().getLocation().getPath();
 			path = java.net.URLDecoder.decode(path, "UTF-8");
-			//System.out.println(path);
 			int firstIndex = path.lastIndexOf(System.getProperty("path.separator")) + 1;
 			int lastIndex = path.lastIndexOf(File.separator) + 1;
 			path = path.substring(firstIndex, lastIndex);
+			System.out.println("\n [warning] trying to search adapter file in path: " + path.concat("adapters") + "\n");
 			seqs=new File(path.concat("adapters/").concat(arg[0]));
 		}
 		
@@ -82,7 +82,8 @@ public class IlluminaClippingTrimmer implements Trimmer
 			}
 		catch (IOException ex)
 			{
-			logger.handleException(ex);
+		//	logger.handleException(ex);
+			throw(ex);
 			}
 		
 		return trimmer;
