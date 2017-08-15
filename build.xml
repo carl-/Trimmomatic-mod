@@ -82,6 +82,7 @@
 
 	<target name="clean">
 		<delete dir="${dist}" />
+		<delete dir="${distsrc}" />
 	</target>
 	
 </project>
