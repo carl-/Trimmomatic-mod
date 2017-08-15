@@ -57,8 +57,12 @@ public class IlluminaClippingTrimmer implements Trimmer
 			int firstIndex = path.lastIndexOf(System.getProperty("path.separator")) + 1;
 			int lastIndex = path.lastIndexOf(File.separator) + 1;
 			path = path.substring(firstIndex, lastIndex);
-			System.out.println("\n[warning] File not Found: "+ arg[0] + "\n[warning] trying to search adapter file in path: " + path.concat("adapters") + "\n");
-			seqs=new File(path.concat("adapters/").concat(arg[0]));
+			File nseq=new File(path.concat("adapters/").concat(arg[0]));
+			if (nseq.exists()){
+				System.out.println("\n[warning] File not Found: "+ arg[0] + "\n[warning] fall back to adapter file: " + path.concat("adapters/").concat(arg[0]) + "\n");
+				seqs=nseq;
+			}
+			
 		}
 		
 		int seedMaxMiss = Integer.parseInt(arg[1]);
