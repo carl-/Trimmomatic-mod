@@ -341,8 +341,8 @@ public class TrimmomaticSE extends Trimmomatic
 	{
 		if(!run(args))
 			{
-			System.err
-					.println("Usage: TrimmomaticSE [-threads <threads>] [-phred33|-phred64] [-trimlog <trimLogFile>] [-quiet] <inputFile> <outputFile> <trimmer1>...");
+			System.err.println("Usage:\n TrimmomaticSE [-threads <threads>] [-phred33|-phred64] [-trimlog <trimLogFile>] [-quiet] <inputFile> <outputFile> <trimmer1>...");
+			System.err.println("Or\n       TrimmomaticSE [-version] [-threads <threads>] [-phred33|-phred64] [-trimlog <trimLogFile>] [-quiet] <-sra accession> <outputFile> <trimmer1>...");
 			System.exit(1);
 			}
 	}

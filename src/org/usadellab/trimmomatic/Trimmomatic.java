@@ -99,7 +99,10 @@ public class Trimmomatic
 			System.err.println("   or: ");
 			System.err.println("       SE [-version] [-threads <threads>] [-phred33|-phred64] [-trimlog <trimLogFile>] [-quiet] <inputFile> <outputFile> <trimmer1>...");
 			System.err.println("   or: ");
-			System.err.println("       -version");						   
+			System.err.println("       -version");
+			System.err.println("\nFor NCBI SRA File:");
+			System.err.println("       PE [-version] [-threads <threads>] [-phred33|-phred64] [-trimlog <trimLogFile>] [-quiet] [-validatePairs] <-sra accession> [-baseout <outputBase> | <outputFile1P> <outputFile1U> <outputFile2P> <outputFile2U>] <trimmer1>...");						   
+			System.err.println("       SE [-version] [-threads <threads>] [-phred33|-phred64] [-trimlog <trimLogFile>] [-quiet] <-sra accession> <outputFile> <trimmer1>...");
 			System.exit(1);
 			}
 	}
