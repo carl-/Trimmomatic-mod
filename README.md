@@ -18,4 +18,4 @@ see branch 'auto_adapters'
 #### NCBI SRA file support
  NCBI NGS SDK (ngs-sdk and ngs-java) and NCBI VDB (ncbi-vdb) should be installed to use this feature
 
-see branch ngs-java
+see branch 'ngs-java'
