@@ -57,7 +57,7 @@ public class TrimmomaticSE extends Trimmomatic
 
 		while (parser.hasNext())
 			{
-			originalRecs[0] = recs[0] = parser.next();
+			originalRecs[0] = recs[0] = parser.next()[0];
 
 			for (int i = 0; i < trimmers.length; i++)
 				{
@@ -194,23 +194,23 @@ public class TrimmomaticSE extends Trimmomatic
 	public void process(File input, File output, Trimmer trimmers[], int phredOffset, File trimLog, int threads)
 			throws IOException
 	{
-		FastqParser parser = new FastqParser(phredOffset);
-		parser.parse(input);
+		FastqParser parser = new FastqParser(phredOffset, input);
+		//parser.parse(input);
 
-		if(phredOffset==0)
+/*		if(phredOffset==0)
 			{
-			int phred=parser.determinePhredOffset();
+			//int phred=parser.determinePhredOffset();
 			if(phred!=0)
 				{
 				logger.infoln("Quality encoding detected as phred"+phred);
-				parser.setPhredOffset(phred);
+				//parser.setPhredOffset(phred);
 				}
 			else
 				{
 				logger.errorln("Error: Unable to detect quality encoding");
 				System.exit(1);
 				}
-			}
+			}*/
 		
 		FastqSerializer serializer = new FastqSerializer();
 		serializer.open(output);
