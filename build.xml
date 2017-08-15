@@ -20,7 +20,7 @@
 		<mkdir dir="${dist_lib}"/>
 		<mkdir dir="${dist_jar}" />
 		<mkdir dir="${dist_unpack}" />
-		<mkdir dir="${distSrc}" />
+		<mkdir dir="${distsrc}" />
 	</target>
 
 	<target name="import" depends="init">
