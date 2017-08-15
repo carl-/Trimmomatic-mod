@@ -59,7 +59,7 @@ public class IlluminaClippingTrimmer implements Trimmer
 			path = path.substring(firstIndex, lastIndex);
 			File nseq=new File(path.concat("adapters/").concat(arg[0]));
 			if (nseq.exists()){
-				System.out.println("\n[warning] File not Found: "+ arg[0] + "\n[warning] fall back to adapter file: " + path.concat("adapters/").concat(arg[0]) + "\n");
+				System.err.println("\n[warning] File not Found: "+ arg[0] + "\n[warning] fall back to adapter file: " + path.concat("adapters/").concat(arg[0]) + "\n");
 				seqs=nseq;
 			}
 			
