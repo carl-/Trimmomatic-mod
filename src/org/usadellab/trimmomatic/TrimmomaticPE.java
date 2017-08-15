@@ -13,7 +13,6 @@ import java.util.concurrent.TimeUnit;
 
 import org.usadellab.trimmomatic.fastq.FastqParser;
 import org.usadellab.trimmomatic.fastq.FastqRecord;
-//import org.usadellab.trimmomatic.fastq.FastqRecordWrapper;
 import org.usadellab.trimmomatic.fastq.FastqSerializer;
 import org.usadellab.trimmomatic.fastq.PairingValidator;
 import org.usadellab.trimmomatic.threading.BlockOfRecords;
@@ -63,7 +62,6 @@ public class TrimmomaticPE extends Trimmomatic
 		while (parser.hasNext())
 			{
 			FastqRecord[] r;
-			//try {
 				r= parser.next();
 					if(recs.length!=2){
 					System.err.println(" Expect Paired Reads, but get only one Read !");
@@ -71,15 +69,6 @@ public class TrimmomaticPE extends Trimmomatic
 				}
 				originalRecs[0] = recs[0] = r[0];
 				originalRecs[1] = recs[1] = r[1];
-			//}
-			//catch ( ErrorMsg x){
-			//	System . err . println ( x . toString () );
-			//}
-			//catch (Exception x){
-			//	System . err . println ( x . toString () );
-			//	throw x;
-			//}
-
 
 			if(pairingValidator!=null)
 				pairingValidator.validatePair(recs[0], recs[1]);
@@ -187,52 +176,47 @@ public class TrimmomaticPE extends Trimmomatic
 
 		statsThread.start();
 
-		boolean done1 = false, done2 = false;
+		boolean done = false;
 
 		List<FastqRecord> recs1 = null;
 		List<FastqRecord> recs2 = null;
 		
 		try
 		{
-			while(parser.hasNext())
-			{
-			FastqRecord[] recs=parser.next();
-			if(recs.length!=2){
-				System.err.println(" Expect Paired Reads, but get only one Read !");
-				throw new RuntimeException("Invalid Paired Reads");
-			}
-			recs1=new ArrayList<FastqRecord>();
-			recs2=new ArrayList<FastqRecord>();
-			recs1.add(recs[0]);
-			recs2.add(recs[1]);
-			if(pairingValidator!=null)
-				pairingValidator.validatePairs(recs1, recs2);
+			while(!done){
+				recs1=new ArrayList<FastqRecord>();
+				recs2=new ArrayList<FastqRecord>();
+				if(parser.hasNext()){
+					FastqRecord[] r=parser.next();
+					if(r.length!=2){
+						System.err.println(" Expect Paired Reads, but get only one Read !");
+						throw new RuntimeException("Invalid Paired Reads");
+					}
+					recs1.add(r[0]);
+					recs2.add(r[1]);
+				}
+				else {
+					done=true;
+				}
+				if(pairingValidator!=null)
+					pairingValidator.validatePairs(recs1, recs2);
 			
-			BlockOfRecords bor = new BlockOfRecords(recs1,recs2);
-			BlockOfWork work = new BlockOfWork(logger, trimmers, bor, true, trimLogStream != null);
-			while (taskQueue.remainingCapacity() < 1)
-				Thread.sleep(100);
+				BlockOfRecords bor = new BlockOfRecords(recs1,recs2);
+				BlockOfWork work = new BlockOfWork(logger, trimmers, bor, true, trimLogStream != null);
+				while (taskQueue.remainingCapacity() < 1)
+					Thread.sleep(100);
 
-			Future<BlockOfRecords> future = taskExec.submit(work);
+				Future<BlockOfRecords> future = taskExec.submit(work);
 			
-			serializerQueue1P.put(future);
-			serializerQueue1U.put(future);
-			serializerQueue2P.put(future);
-			serializerQueue2U.put(future);
-			trimStatsQueue.put(future);
+				serializerQueue1P.put(future);
+				serializerQueue1U.put(future);
+				serializerQueue2P.put(future);
+				serializerQueue2U.put(future);
+				trimStatsQueue.put(future);
 
-			if (trimLogQueue != null)
-				trimLogQueue.put(future);
+				if (trimLogQueue != null)
+					trimLogQueue.put(future);
 			}
-			BlockOfWork work = new BlockOfWork(logger, trimmers, new BlockOfRecords(new ArrayList<FastqRecord>(),new ArrayList<FastqRecord>()), true, trimLogStream != null);
-			Future<BlockOfRecords> future = taskExec.submit(work);
-			serializerQueue1P.put(future);
-			serializerQueue1U.put(future);
-			serializerQueue2P.put(future);
-			serializerQueue2U.put(future);
-			trimStatsQueue.put(future);
-			if (trimLogQueue != null)
-				trimLogQueue.put(future);
 		
 			parser.close();
 		
@@ -250,8 +234,7 @@ public class TrimmomaticPE extends Trimmomatic
 				logger.infoln(statsWorker.getStats().getStatsPE());
 			}
 		}
-		catch (InterruptedException e)
-			{
+		catch (InterruptedException e){
 			throw new RuntimeException(e);
 			}
 		catch (Exception e){
@@ -525,7 +508,7 @@ public void process(String acc, File output1P, File output1U, File output2P, Fil
 		int additionalArgs= sra==null ? 1+(templateInput==null?2:0)+(templateOutput==null?4:0) : 1+(templateOutput==null?4:0);
 		
 		if ((nonOptionArgs.size() < additionalArgs) || badOption)
-			{System.err.println(nonOptionArgs.size());System.err.println(additionalArgs);return showVersion; }
+			return showVersion; 
 		
 		Logger logger=new Logger(true,true,!quiet);
 		

@@ -23,7 +23,7 @@ import org.usadellab.trimmomatic.threading.TrimStatsWorker;
 import org.usadellab.trimmomatic.trim.Trimmer;
 import org.usadellab.trimmomatic.trim.TrimmerFactory;
 import org.usadellab.trimmomatic.util.Logger;
-
+import ngs.ErrorMsg;
 public class TrimmomaticSE extends Trimmomatic
 {
 
@@ -198,23 +198,6 @@ public class TrimmomaticSE extends Trimmomatic
 			throws IOException
 	{
 		FastqParser parser = new FastqParser(phredOffset, input);
-		//parser.parse(input);
-
-/*		if(phredOffset==0)
-			{
-			//int phred=parser.determinePhredOffset();
-			if(phred!=0)
-				{
-				logger.infoln("Quality encoding detected as phred"+phred);
-				//parser.setPhredOffset(phred);
-				}
-			else
-				{
-				logger.errorln("Error: Unable to detect quality encoding");
-				System.exit(1);
-				}
-			}*/
-		
 		FastqSerializer serializer = new FastqSerializer();
 		serializer.open(output);
 
@@ -233,11 +216,34 @@ public class TrimmomaticSE extends Trimmomatic
 			trimLogStream.close();
 	}
 
+	public void process(String sra, File output, Trimmer trimmers[], int phredOffset, File trimLog, int threads)
+			throws IOException,Exception, ErrorMsg
+	{
+		FastqParser parser = new FastqParser(phredOffset, sra);
+		FastqSerializer serializer = new FastqSerializer();
+		serializer.open(output);
+
+		PrintStream trimLogStream = null;
+		if (trimLog != null)
+			trimLogStream = new PrintStream(trimLog);
+
+		if (threads == 1)
+			processSingleThreaded(parser, serializer, trimmers, trimLogStream);
+		else
+			processMultiThreaded(parser, serializer, trimmers, trimLogStream, threads);
+
+		serializer.close();
+
+		if (trimLogStream != null)
+			trimLogStream.close();
+	}
+	
 	public static boolean run(String[] args) throws IOException
 	{
 		int argIndex = 0;
 		int phredOffset = 0;
 		int threads = 0;
+		String sra=null;
 
 		boolean badOption = false;
 
@@ -259,6 +265,8 @@ public class TrimmomaticSE extends Trimmomatic
 					phredOffset = 64;
 				else if (arg.equals("-threads"))
 					threads = Integer.parseInt(args[argIndex++]);
+				else if (arg.equals("-sra"))
+					sra = args[argIndex++];
 				else if (arg.equals("-trimlog"))
 					{
 					if (argIndex < args.length)
@@ -279,12 +287,9 @@ public class TrimmomaticSE extends Trimmomatic
 			else
 				nonOptionArgs.add(arg);
 			}
-
-		if(showVersion)
+		if(phredOffset ==0) phredOffset = 33;
+		if(showVersion || badOption)
 			Trimmomatic.showVersion();
-		
-		if ((nonOptionArgs.size() < 3) || badOption)
-			return showVersion;
 
 		Logger logger=new Logger(true,true,!quiet);
 		
@@ -300,15 +305,34 @@ public class TrimmomaticSE extends Trimmomatic
 			}
 		
 		Iterator<String> nonOptionArgsIter=nonOptionArgs.iterator();
-		
-		File input = new File(nonOptionArgsIter.next());
-		File output = new File(nonOptionArgsIter.next());
+		if(sra==null){
+			if ((nonOptionArgs.size() < 3) ) return showVersion;
+			File input = new File(nonOptionArgsIter.next());
+			File output = new File(nonOptionArgsIter.next());
 
-		Trimmer trimmers[]=createTrimmers(logger, nonOptionArgsIter);
+			Trimmer trimmers[]=createTrimmers(logger, nonOptionArgsIter);
 
-		TrimmomaticSE tm = new TrimmomaticSE(logger);
-		tm.process(input, output, trimmers, phredOffset, trimLog, threads);
+			TrimmomaticSE tm = new TrimmomaticSE(logger);
+			tm.process(input, output, trimmers, phredOffset, trimLog, threads);
+		}
+		else {
+			if(nonOptionArgs.size()<1) return showVersion;
+			File output = new File(nonOptionArgsIter.next());
 
+			Trimmer trimmers[]=createTrimmers(logger, nonOptionArgsIter);
+
+			TrimmomaticSE tm = new TrimmomaticSE(logger);
+			try {
+				tm.process(sra, output, trimmers, phredOffset, trimLog, threads);
+			}
+			catch ( ErrorMsg x) {
+				System . err . println ( x . toString () );
+			}
+			catch (Exception x){
+				System . err . println ( x . toString () );
+				System.exit(1);
+			}
+		}
 		logger.infoln("TrimmomaticSE: Completed successfully");
 		return true;
 	}

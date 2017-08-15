@@ -134,7 +134,8 @@ public class FastqParser {
             System . err . println ( x . toString () );
         }
         catch (Exception x){
-            System . err . println ( x . toString () );
+            System.err.println( x.toString() );
+			throw new RuntimeException("Failed to parse SRA file");
         }
         }
         else {
