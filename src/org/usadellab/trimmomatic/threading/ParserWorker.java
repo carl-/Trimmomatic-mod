@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.usadellab.trimmomatic.fastq.FastqParser;
 import org.usadellab.trimmomatic.fastq.FastqRecord;
 
+
 public class ParserWorker implements Runnable
 {
 	public static final int BLOCKSIZE=1000;
@@ -39,7 +40,9 @@ public class ParserWorker implements Runnable
 	
 			while(parser.hasNext())
 				{
-				recs.add(parser.next());
+				FastqRecord[] r=parser.next();
+				for(int i=0;i<r.length;i++)
+				recs.add(r[i]);
 				if(recs.size()>=BLOCKSIZE)
 					{
 					parserQueue.put(recs);

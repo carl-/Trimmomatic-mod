@@ -26,14 +26,14 @@ public class Pairomatic
 	{
 		Set<String> names = new LinkedHashSet<String>();
 
-		FastqParser parser = new FastqParser(0);
-		parser.parse(file);
+		FastqParser parser = new FastqParser(0, file);
+		//parser.parse(file);
 
 		while (parser.hasNext())
 			{
-			FastqRecord rec = parser.next();
+			FastqRecord rec[] = parser.next();
 
-			String name = rec.getName();
+			String name = rec[0].getName();
 
 			if (delimiter != null)
 				{
@@ -86,8 +86,8 @@ public class Pairomatic
 	private void splitFastq(File input, File match, File unmatch, Set<String> toKeep, Character delimiter)
 			throws IOException
 	{
-		FastqParser parser = new FastqParser(0);
-		parser.parse(input);
+		FastqParser parser = new FastqParser(0,input);
+		//parser.parse(input);
 
 		FastqSerializer matchSerializer=new FastqSerializer();
 		matchSerializer.open(match);
@@ -97,9 +97,9 @@ public class Pairomatic
 		
 		while (parser.hasNext())
 			{
-			FastqRecord rec = parser.next();
+			FastqRecord rec[] = parser.next();
 
-			String name = rec.getName();
+			String name = rec[0].getName();
 
 			if (delimiter != null)
 				{
@@ -113,9 +113,9 @@ public class Pairomatic
 				}
 			
 			if(toKeep.contains(name))
-				matchSerializer.writeRecord(rec);
+				matchSerializer.writeRecord(rec[0]);
 			else
-				unmatchSerializer.writeRecord(rec);
+				unmatchSerializer.writeRecord(rec[0]);
 			}
 		
 		matchSerializer.close();
