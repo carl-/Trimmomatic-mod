@@ -141,9 +141,6 @@ public class TrimmomaticPE extends Trimmomatic
 			FastqSerializer serializer1U, FastqSerializer serializer2P, FastqSerializer serializer2U,
 			Trimmer trimmers[], PrintStream trimLogStream, PairingValidator pairingValidator, int threads) throws IOException
 	{
-		//ArrayBlockingQueue<List<FastqRecord>> parser1Queue = new ArrayBlockingQueue<List<FastqRecord>>(threads);
-		//ArrayBlockingQueue<List<FastqRecord>> parser2Queue = new ArrayBlockingQueue<List<FastqRecord>>(threads);
-		System.err.println(" enter multithread mode....");
 		ArrayBlockingQueue<Runnable> taskQueue = new ArrayBlockingQueue<Runnable>(threads);
 
 		ArrayBlockingQueue<Future<BlockOfRecords>> serializerQueue1P = new ArrayBlockingQueue<Future<BlockOfRecords>>(
@@ -154,12 +151,6 @@ public class TrimmomaticPE extends Trimmomatic
 				threads);
 		ArrayBlockingQueue<Future<BlockOfRecords>> serializerQueue2U = new ArrayBlockingQueue<Future<BlockOfRecords>>(
 				threads);
-
-		//ParserWorker parserWorker1 = new ParserWorker(parser1, parser1Queue);
-		//ParserWorker parserWorker2 = new ParserWorker(parser2, parser2Queue);
-
-		//Thread parser1Thread = new Thread(parserWorker1);
-		//Thread parser2Thread = new Thread(parserWorker2);
 
 		ThreadPoolExecutor taskExec = new ThreadPoolExecutor(threads, threads, 0, TimeUnit.SECONDS, taskQueue);
 
@@ -173,7 +164,7 @@ public class TrimmomaticPE extends Trimmomatic
 		Thread serializer2PThread = new Thread(serializerWorker2P);
 		Thread serializer2UThread = new Thread(serializerWorker2U);
 
-		ArrayBlockingQueue<Future<BlockOfRecords>> trimStatsQueue = new ArrayBlockingQueue<Future<BlockOfRecords>>(	threads * 5);
+		ArrayBlockingQueue<Future<BlockOfRecords>> trimStatsQueue = new ArrayBlockingQueue<Future<BlockOfRecords>>(threads * 5);
 		TrimStatsWorker statsWorker = new TrimStatsWorker(trimStatsQueue);
 		Thread statsThread = new Thread(statsWorker);
 
@@ -189,9 +180,6 @@ public class TrimmomaticPE extends Trimmomatic
 			trimLogThread.start();
 			}
 
-		//parser1Thread.start();
-		//parser2Thread.start();
-
 		serializer1PThread.start();
 		serializer1UThread.start();
 		serializer2PThread.start();
@@ -205,66 +193,63 @@ public class TrimmomaticPE extends Trimmomatic
 		List<FastqRecord> recs2 = null;
 		
 		try
+		{
+			while(parser.hasNext())
 			{
-				System.err.println("enter while loop....");
-				while(parser.hasNext())
-				{
-				FastqRecord[] recs=parser.next();
-				if(recs.length!=2){
-					System.err.println(" Expect Paired Reads, but get only one Read !");
-					throw new RuntimeException("Invalid Paired Reads");
-				}
-				recs1=new ArrayList<FastqRecord>();
-				recs2=new ArrayList<FastqRecord>();
-				recs1.add(recs[0]);
-				recs2.add(recs[1]);
-				if(pairingValidator!=null)
-					pairingValidator.validatePairs(recs1, recs2);
-				
-				BlockOfRecords bor = new BlockOfRecords(recs1,recs2);
-				BlockOfWork work = new BlockOfWork(logger, trimmers, bor, true, trimLogStream != null);
-
-				while (taskQueue.remainingCapacity() < 1)
-					Thread.sleep(100);
-
-				Future<BlockOfRecords> future = taskExec.submit(work);
-				
-				serializerQueue1P.put(future);
-				serializerQueue1U.put(future);
-				serializerQueue2P.put(future);
-				serializerQueue2U.put(future);
-				System.err.println("1P size= "+serializerQueue1P.size());
-				trimStatsQueue.put(future);
-
-				if (trimLogQueue != null)
-					trimLogQueue.put(future);
-				}
+			FastqRecord[] recs=parser.next();
+			if(recs.length!=2){
+				System.err.println(" Expect Paired Reads, but get only one Read !");
+				throw new RuntimeException("Invalid Paired Reads");
+			}
+			recs1=new ArrayList<FastqRecord>();
+			recs2=new ArrayList<FastqRecord>();
+			recs1.add(recs[0]);
+			recs2.add(recs[1]);
+			if(pairingValidator!=null)
+				pairingValidator.validatePairs(recs1, recs2);
 			
-			//parser1Thread.join();
-			//parser2Thread.join();
+			BlockOfRecords bor = new BlockOfRecords(recs1,recs2);
+			BlockOfWork work = new BlockOfWork(logger, trimmers, bor, true, trimLogStream != null);
+			while (taskQueue.remainingCapacity() < 1)
+				Thread.sleep(100);
 
+			Future<BlockOfRecords> future = taskExec.submit(work);
+			
+			serializerQueue1P.put(future);
+			serializerQueue1U.put(future);
+			serializerQueue2P.put(future);
+			serializerQueue2U.put(future);
+			trimStatsQueue.put(future);
+
+			if (trimLogQueue != null)
+				trimLogQueue.put(future);
+			}
+			BlockOfWork work = new BlockOfWork(logger, trimmers, new BlockOfRecords(new ArrayList<FastqRecord>(),new ArrayList<FastqRecord>()), true, trimLogStream != null);
+			Future<BlockOfRecords> future = taskExec.submit(work);
+			serializerQueue1P.put(future);
+			serializerQueue1U.put(future);
+			serializerQueue2P.put(future);
+			serializerQueue2U.put(future);
+			trimStatsQueue.put(future);
+			if (trimLogQueue != null)
+				trimLogQueue.put(future);
+		
 			parser.close();
-			//parser2.close();
-			System.err.println(" Finished ...");
+		
 			taskExec.shutdown();
 			taskExec.awaitTermination(1, TimeUnit.HOURS);
-			System.err.println(" Task Pool terminated...");
-			while (!serializerWorker1P.isComplete()){
-				System.err.println("1P size= "+serializerQueue1P.size());
-				Thread.sleep(10000);
-			}
+		
 			serializer1PThread.join();
 			serializer1UThread.join();
 			serializer2PThread.join();
 			serializer2UThread.join();
-			System.err.println(" Output thread finished...");
 
-			if (trimLogThread != null)
+			if (trimLogThread != null){
 				trimLogThread.join();
-
-			statsThread.join();
-			logger.infoln(statsWorker.getStats().getStatsPE());
+				statsThread.join();
+				logger.infoln(statsWorker.getStats().getStatsPE());
 			}
+		}
 		catch (InterruptedException e)
 			{
 			throw new RuntimeException(e);
