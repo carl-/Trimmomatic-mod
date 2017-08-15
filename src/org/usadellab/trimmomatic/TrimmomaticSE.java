@@ -108,13 +108,13 @@ public class TrimmomaticSE extends Trimmomatic
 	public void processMultiThreaded(FastqParser parser, FastqSerializer serializer, Trimmer trimmers[],
 			PrintStream trimLogStream, int threads) throws IOException
 	{
-		ArrayBlockingQueue<List<FastqRecord>> parserQueue = new ArrayBlockingQueue<List<FastqRecord>>(threads);
+		//ArrayBlockingQueue<List<FastqRecord>> parserQueue = new ArrayBlockingQueue<List<FastqRecord>>(threads);
 		ArrayBlockingQueue<Runnable> taskQueue = new ArrayBlockingQueue<Runnable>(threads * 2);
 		ArrayBlockingQueue<Future<BlockOfRecords>> serializerQueue = new ArrayBlockingQueue<Future<BlockOfRecords>>(
 				threads * 5);
 
-		ParserWorker parserWorker = new ParserWorker(parser, parserQueue);
-		Thread parserThread = new Thread(parserWorker);
+		//ParserWorker parserWorker = new ParserWorker(parser, parserQueue);
+		//Thread parserThread = new Thread(parserWorker);
 		ThreadPoolExecutor taskExec = new ThreadPoolExecutor(threads, threads, 0, TimeUnit.SECONDS, taskQueue);
 		SerializerWorker serializerWorker = new SerializerWorker(serializer, serializerQueue, 0);
 		Thread serializerThread = new Thread(serializerWorker);
@@ -136,7 +136,7 @@ public class TrimmomaticSE extends Trimmomatic
 			trimLogThread.start();
 			}
 
-		parserThread.start();
+		//parserThread.start();
 		serializerThread.start();
 		statsThread.start();
 
@@ -148,13 +148,18 @@ public class TrimmomaticSE extends Trimmomatic
 			{
 			while (!done)
 				{
-				recs1 = null;
-				while (recs1 == null)
-					recs1 = parserQueue.poll(1, TimeUnit.SECONDS);
-
-				if (recs1 == null || recs1.size() == 0)
-					done = true;
-
+				recs1 = new ArrayList<FastqRecord>();
+				
+				if (parser.hasNext()){
+					FastqRecord[] r=parser.next();
+					if(r.length!=1){
+						System.err.println(" Expect Single Reads, but get Paired Read !");
+						throw new RuntimeException("Invalid Single Read");
+					}
+					recs1.add(r[0]);
+				}
+				else {done = true;}
+				
 				BlockOfRecords bor = new BlockOfRecords(recs1, null);
 				BlockOfWork work = new BlockOfWork(logger, trimmers, bor, false, trimLogStream != null);
 
@@ -169,8 +174,6 @@ public class TrimmomaticSE extends Trimmomatic
 				if (trimLogQueue != null)
 					trimLogQueue.put(future);
 				}
-
-			parserThread.join();
 			parser.close();
 
 			taskExec.shutdown();
