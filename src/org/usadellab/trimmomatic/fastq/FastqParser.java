@@ -14,9 +14,14 @@ import org.itadaki.bzip2.BZip2InputStream;
 import org.usadellab.trimmomatic.util.ConcatGZIPInputStream;
 import org.usadellab.trimmomatic.util.PositionTrackingInputStream;
 
+import ngs.ErrorMsg;
+import ngs.ReadCollection;
+import ngs.Read;
+import ngs.ReadIterator;
+
 public class FastqParser {
 
-	private static final int PREREAD_COUNT=10000;
+	private static final int PREREAD_COUNT=1000;
 
     private int phredOffset;
     private ArrayDeque<FastqRecord> deque;
@@ -24,26 +29,62 @@ public class FastqParser {
     int patternHistogram[];
     
     private PositionTrackingInputStream posTrackInputStream;
-    private BufferedReader reader;
-    private FastqRecord current;
+    private BufferedReader reader1=null;
+    private BufferedReader reader2=null;
+    private FastqRecord[] current;
     private long fileLength;
-
+    private long sra_max_spot;
+    private long sra_processed_spot;
+    private boolean single;
+    private boolean sra;
     private AtomicBoolean atEOF;
+
+    private ReadCollection run;
+    private String run_name;
+    private ReadIterator iter;
     
-    public FastqParser(int phredOffset) {
+    public FastqParser(int phredOffset, File file) throws IOException {
         this.phredOffset = phredOffset;
-        deque=new ArrayDeque<FastqRecord>(PREREAD_COUNT);
-        
+        this.sra=false;
+        this.deque=new ArrayDeque<FastqRecord>(PREREAD_COUNT);
+        this.reader1=parse(file);
+        this.single=true;
         this.atEOF=new AtomicBoolean();
+
+        parseOne();
+
     }
 
-    public void setPhredOffset(int phredOffset)
+    public FastqParser(int phredOffset, File  file1, File file2) throws IOException {
+        this.phredOffset = phredOffset;
+        this.sra=false;
+        this.deque=new ArrayDeque<FastqRecord>(PREREAD_COUNT);
+        this.reader1=parse(file1);
+        this.reader2=parse(file2);
+        this.single=false;
+        this.atEOF=new AtomicBoolean();
+        parseOne();
+    }
+
+    public FastqParser(int phredOffset, String acc) throws ErrorMsg, Exception {
+        this.phredOffset = phredOffset;
+        this.sra=true;
+        run = gov.nih.nlm.ncbi.ngs.NGS.openReadCollection(acc);
+        this.sra_max_spot=run.getReadCount();
+        this.iter=run.getReadRange(1, this.sra_max_spot);
+
+        this.deque=new ArrayDeque<FastqRecord>(PREREAD_COUNT);
+        this.atEOF=new AtomicBoolean();
+        parseOne();
+    }
+
+/*    public void setPhredOffset(int phredOffset)
     {
     	this.phredOffset=phredOffset;
     	
     	if(current!=null)
     		current.setPhredOffset(phredOffset);
-    }
+    }*/
     
     public void parseOne() throws IOException 
     {
@@ -54,48 +95,140 @@ public class FastqParser {
         String comment;
         String quality;
 
-        String line;
+        if (this.sra) {
+            try {
+            if(iter.nextRead()){
+                sra_processed_spot++;
+                int n=0;
+                if (iter.getNumFragments()==2) {
+                    current=new FastqRecord[2];
+                    single=false;
+                }
+                else{
+                    current=new FastqRecord[1];
+                    single=true;
+                }
+                while( iter.nextFragment() ){
+                    n++;
+                    //String Fid[]=it.getFragmentId().split("\\.");
+                    //int i = Integer.parseInt(Fid[1].substring(2));
+                    
+                    name=iter.getReadName()+"/"+n;
+                    sequence=iter.getFragmentBases();
+                    comment=iter.getReadId();
+                    quality=iter.getFragmentQualities();
 
-        line = reader.readLine();
-        if (line == null) {
-        	atEOF.set(true);
-            return;
+                    if (n==1){
+                        current[0]=new FastqRecord(name, sequence, comment, quality, this.phredOffset);
+                    }
+                    else {
+                        current[1]=new FastqRecord(name, sequence, comment, quality, this.phredOffset) ;
+                    }
+
+                }
+            }
+
+            else atEOF.set(true);
         }
+        catch (ErrorMsg x){
+            System . err . println ( x . toString () );
+        }
+        catch (Exception x){
+            System . err . println ( x . toString () );
+        }
+        }
+        else {
+            String line;
+            if (single) {
+                current=new FastqRecord[1];
+            }
+            else {
+                current=new FastqRecord[2];
+            }
+
+            line = reader1.readLine();
+            if (line == null) {
+                atEOF.set(true);
+                return;
+            }
         
-        if (line.charAt(0)=='@') {
-            name = line.substring(1);
-        } else {
-            throw new RuntimeException("Invalid FASTQ name line: " + line);
+            if (line.charAt(0)=='@') {
+                name = line.substring(1);
+            } else {
+                throw new RuntimeException("Invalid FASTQ name line: " + line);
+            }
+
+            sequence = reader1.readLine();
+            if(sequence==null)
+                throw new RuntimeException("Missing sequence line from record: " + name);
+
+            line = reader1.readLine();
+            if(line==null)
+                throw new RuntimeException("Missing comment line from record: " + name);
+
+            if (line.charAt(0)=='+') {
+                comment = line.substring(1);
+            } else {
+                throw new RuntimeException("Invalid FASTQ comment line: " + line);
+            }
+
+            quality = reader1.readLine();
+            if(quality==null)
+                throw new RuntimeException("Missing quality line from record: " + name);
+
+            current[0]=new FastqRecord(name, sequence, comment, quality, this.phredOffset);
+
+            if (! single){
+            line = reader2.readLine();
+            if (line == null) {
+                atEOF.set(true);
+                return;
+            }
+        
+            if (line.charAt(0)=='@') {
+                name = line.substring(1);
+            } else {
+                throw new RuntimeException("Invalid FASTQ name line: " + line);
+            }
+
+            sequence = reader2.readLine();
+            if(sequence==null)
+                throw new RuntimeException("Missing sequence line from record: " + name);
+
+            line = reader2.readLine();
+            if(line==null)
+                throw new RuntimeException("Missing comment line from record: " + name);
+
+            if (line.charAt(0)=='+') {
+                comment = line.substring(1);
+            } else {
+                throw new RuntimeException("Invalid FASTQ comment line: " + line);
+            }
+
+            quality = reader2.readLine();
+            if(quality==null)
+                throw new RuntimeException("Missing quality line from record: " + name);
+
+            current[1]=new FastqRecord(name, sequence, comment, quality, this.phredOffset) ;
+
         }
 
-        sequence = reader.readLine();
-        if(sequence==null)
-        	throw new RuntimeException("Missing sequence line from record: " + name);
-
-        line = reader.readLine();
-        if(line==null)
-        	throw new RuntimeException("Missing comment line from record: " + name);
-
-        if (line.charAt(0)=='+') {
-            comment = line.substring(1);
-        } else {
-            throw new RuntimeException("Invalid FASTQ comment line: " + line);
-        }
-
-        quality = reader.readLine();
-        if(quality==null)
-        	throw new RuntimeException("Missing quality line from record: " + name);
-
-        current = new FastqRecord(name, sequence, comment, quality, phredOffset);
     }
+}
+
 
     public int getProgress() {
     	if(atEOF.get())
     		return 100;
     	
-    	long bytesRead=posTrackInputStream.getPosition();
+        if (sra){
+            return (int)(((float) sra_processed_spot / sra_max_spot) * 100); 
+        }
+        else {
+    	   long bytesRead=posTrackInputStream.getPosition();
     	
-    	return (int)(((float) bytesRead / fileLength) * 100);    
+    	   return (int)(((float) bytesRead / fileLength) * 100);    
+        }
     }
 
     
@@ -128,7 +261,7 @@ public class FastqParser {
     }
     
     
-    public void parse(File file) throws IOException {
+    public BufferedReader parse(File file) throws IOException {
         String name = file.getName();
         fileLength = file.length();
         
@@ -144,51 +277,25 @@ public class FastqParser {
             contentInputStream=new ZipInputStream(posTrackInputStream);
         }
         
-        reader=new BufferedReader(new InputStreamReader(contentInputStream), 32768);
-        
-        if(phredOffset==0)
-        	{
-        	deque.clear();
-        	qualHistogram=new int[256];
-        	
-        	for(int i=0;i<PREREAD_COUNT;i++)
-        		{
-        		parseOne();
-        		if(current!=null)
-        			{
-        			deque.add(current);
-        			accumulateHistogram(current);
-        			}
-        		}
-        	}
-        parseOne();
+        BufferedReader reader=new BufferedReader(new InputStreamReader(contentInputStream), 32768);
+        return reader;
     }
 
     public void close() throws IOException {
-        reader.close();
+        if(reader1!=null) reader1.close();
+        if(reader2!=null) reader2.close();
     }
 
     public boolean hasNext() {
         return (!deque.isEmpty()) || (current != null);
     }
 
-    public FastqRecord next() throws IOException {
-    	if(deque.isEmpty())
-    		{
-    		FastqRecord current = this.current;
-    		parseOne();
+    public FastqRecord[] next() throws IOException {
 
-    		return current;
-    		}
-    	else
-    		{
-    		FastqRecord rec=deque.poll();
-    		
-    		if(rec!=null)
-    			rec.setPhredOffset(phredOffset);
-    		
-    		return rec;
-    		}
+    		FastqRecord[] recs = this.current;
+    		parseOne();
+    		return recs;
+
     }
 
 }
