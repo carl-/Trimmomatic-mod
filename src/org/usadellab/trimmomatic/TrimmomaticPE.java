@@ -230,9 +230,10 @@ public class TrimmomaticPE extends Trimmomatic
 
 			if (trimLogThread != null){
 				trimLogThread.join();
+			}
 				statsThread.join();
 				logger.infoln(statsWorker.getStats().getStatsPE());
-			}
+			
 		}
 		catch (InterruptedException e){
 			throw new RuntimeException(e);
