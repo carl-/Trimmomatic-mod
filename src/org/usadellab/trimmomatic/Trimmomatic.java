@@ -102,7 +102,19 @@ public class Trimmomatic
 			System.err.println("       -version");
 			System.err.println("\nFor NCBI SRA File:");
 			System.err.println("       PE [-version] [-threads <threads>] [-phred33|-phred64] [-trimlog <trimLogFile>] [-quiet] [-validatePairs] <-sra accession> [-baseout <outputBase> | <outputFile1P> <outputFile1U> <outputFile2P> <outputFile2U>] <trimmer1>...");						   
-			System.err.println("       SE [-version] [-threads <threads>] [-phred33|-phred64] [-trimlog <trimLogFile>] [-quiet] <-sra accession> <outputFile> <trimmer1>...");
+			System.err.println("       SE [-version] [-threads <threads>] [-phred33|-phred64] [-trimlog <trimLogFile>] [-quiet] <-sra accession> <outputFile> <trimmer1>...\n");
+			System.err.println("Available Trimmers: [eg. ILLUMINACLIP:TruSeq3-PE.fa:2:30:10:6:true LEADING:5 TRAILING:5 SLIDINGWINDOW:4:20 MINLEN:36 ]");
+			System.err.println("  ILLUMINACLIP:<fastaWithAdaptersEtc>:<seed mismatches>:<palindrome clip threshold>:<simple clip threshold>[:<minAdapterLength>:<keepBothReads>]");
+			System.err.println("  SLIDINGWINDOW:<windowSize>:<requiredQuality> ");
+			System.err.println("  LEADING:<quality>");
+			System.err.println("  TRAILING:<quality>");
+			System.err.println("  CROP:<length>");
+			System.err.println("  HEADCROP:<length> ");
+			System.err.println("  MINLEN:<length>");
+			System.err.println("  MAXINFO:<targetLength>:<strictness>");
+			System.err.println("  TOPHRED33");
+			System.err.println("  TOPHRED64");
+			System.err.println("  AVGQUAL:<minimum average quality>\n");
 			System.exit(1);
 			}
 	}
