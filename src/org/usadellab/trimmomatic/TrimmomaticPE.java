@@ -430,8 +430,8 @@ public void process(String acc, File output1P, File output1U, File output2P, Fil
 	public static boolean run(String[] args) throws IOException
 	{
 		int argIndex = 0;
-		int phredOffset = 0;
-		int threads = 0;
+		int phredOffset = 33;
+		int threads = 1;
 
 		String templateInput=null;
 		String templateOutput=null;
